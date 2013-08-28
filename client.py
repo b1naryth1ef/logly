@@ -8,13 +8,13 @@ class Client(object):
     def send(self, data):
         self.sock.sendto(data+"\n", self.dest)
 
-
 class LoglyHandler(logging.Handler):
-    def __init__(self, host, port=9210, should_hash=True):
+    def __init__(self, host, source="", port=9210, should_hash=True):
         logging.Handler.__init__(self)
         self.client = Client(host, port)
 
         self.hash = should_hash
+        self.source = source or socket.gethostname()
 
         if self.hash:
             self.get_general_info()
@@ -36,6 +36,7 @@ class LoglyHandler(logging.Handler):
             self.get_general_info()
 
         pak = {
+            "source": self.source,
             "msg": record.msg,
             "levelname": record.levelname,
             "path": record.pathname,
