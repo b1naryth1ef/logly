@@ -143,8 +143,8 @@ class LogLine(Base):
                     for logline in LogLine.select(LogLine.id).where(LogLine.msg == subitem):
                         logline.msg = q[0]
                         logline.save()
-                        subitem.delete()
                         total += 1
+                    subitem.delete()
             # Make sure to mark the origin line as parsed
             item.new = False
             item.save()
