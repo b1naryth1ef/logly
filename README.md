@@ -1,0 +1,4 @@
+# Logly, usable logs for humans
+Logs are awesome. They tell you when shit breaks, or when things are going great. The problem is, your logs are way too complex. You've got nginx, redis, mongodb, postgresql, sshd, syslog, devlog, and more to parse through. If your brave, you try sed or some leet regex, but at the end of the day you have to work for your logs to even make them useful.
+
+There are tons of tools out there today to help you store logs, and some of them even help you search them. But Logly is the only one that helps your make your logs work for you. By aggregating as much information as possible, Logly allows you to track exceptions as their relevant to your app. Whether thats by Git Commits, Python Exceptions, or Nginx errors.

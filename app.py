@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 from database import *
 from datetime import datetime
 import time
@@ -7,22 +7,22 @@ app = Flask(__name__)
 
 @app.route("/get")
 def route_get():
-    #LineMsg.setupz()
-    print LineMsg.select().count()
-    q = '&'.join(request.values.get("q").split(" "))
-    start = time.time()
-    q = LineMsg.get_db().execute_sql("""SELECT COUNT(*) FROM linemsg WHERE tsv @@ to_tsquery('english', '%s');""" % q)
-    end = time.time()
-    print "Search took: %s" % str(end-start)
-    print q.fetchone() #.rowcount
-    # q = LineMsg.raw("""""
-    #             SELECT * FROM linemsg
-    #             WHERE to_tsvector(msg)
-    #                 @@ to_tsquery('test')
-    #             """"")
-    # for x in q:
-    #     print x
-    return ":3"
+    built_q = '&'.join(request.values.get("q").split(" "))
+    print "Running query for %s" % built_q
+
+    result = []
+    for item in LineMsg.search(built_q):
+        result += prefetch(LogLine.select(LogLine.time, LogLine.msg).where(LogLine.msg == item.id).limit(100))
+    return render_template("index.html", results=result)
+
+@app.route("/")
+def route_root():
+    print "Total LogLines: %s" % LogLine.select().count()
+    print "Total LineMsgs: %s" % LineMsg.select().count()
+    result = []
+    for item in LogLine.select().order_by(LogLine.time.desc()).limit(100):
+        result.append(item)
+    return render_template("index.html", results=result)
 
 @app.route('/test')
 def route_test():

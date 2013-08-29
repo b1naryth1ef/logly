@@ -36,9 +36,10 @@ class LoglyHandler(logging.Handler):
             self.get_general_info()
 
         pak = {
+            "type": "python",
             "source": self.source,
             "msg": record.msg,
-            "levelname": record.levelname,
+            "type": record.levelname,
             "path": record.pathname,
             "line": record.lineno,
             "function": record.funcName,
