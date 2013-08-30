@@ -16,8 +16,8 @@ def test_function_1():
 
 # This generates some duplicated text data
 def test_function_2():
-    for i in range(1, 50):
-        log.info("test")
+    for i in range(1, 7000):
+        log.info("asdfasdfasdfasdfasdasdfasdfasdfasdfasdfasdff")
 
 # start = time.time()
 # for i in range(0, rows):

@@ -33,7 +33,7 @@ class Server(object):
         A thread which grabs log entries off of
         the internal queue, and attempts to parse them.
         Keep in mind this doesn't have to be super fast,
-        becuase we're buffering log lines.
+        because we're buffering log lines.
         """
         while True:
             if main and debug:
@@ -48,6 +48,8 @@ class Server(object):
         """
         A loop which grabs log entires from UDP and
         stores them in the internal queue for parsing.
+        On average, at full UDP local throughput, we
+        capture about 97 percent of log lines.
         """
         if debug: print "Debug Enabled!"
         for i in range(0, self.threads):

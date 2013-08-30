@@ -1,7 +1,7 @@
 import os, datetime
 from peewee import *
 
-db = PostgresqlDatabase("logly", threadlocals=True, user="bro", host=os.getenv("HOST"), password=os.getenv("PSQLPASS"))
+db = PostgresqlDatabase("logly_dev", threadlocals=True, user="bro")
 
 class Base(Model):
     class Meta:
@@ -127,28 +127,38 @@ class LogLine(Base):
         database entry. This can cut down insanely on the number of lines we actually store.
         Ideally the final app will schedule this task.
         """
-        total = 0
 
-        # First find any new LogLines that haven't been parsed
-        for item in LogLine.select(LogLine.id, LogLine.msg).join(LineMsg).where(LogLine.new == True):
+        # Select duplicates
+        DUPE_QUERY = """SELECT msg, count(1) FROM linemsg
+                     GROUP BY msg
+                     HAVING count(1)>1"""
 
-            # Now lets search inside these LogItems to get any duplicated LineMsg's
-            q = LineMsg.select(LineMsg.id).where((LineMsg.msg == item.msg.msg) & (LineMsg.id != item.msg.id))
+        print "Attempting to prune our database..."
 
-            # If we have duplicates, lets consolidate them
-            if q.count() > 1:
-                # Lets iterate over LineMsg that is duplicated, skipping the first item (we use that as the consolidation point)
-                for subitem in q[1:]:
-                    # Lets grab any actual LogLines referencing this line (keeping in mind any consolidation thats happened in the past)
-                    for logline in LogLine.select(LogLine.id).where(LogLine.msg == subitem):
-                        logline.msg = q[0]
-                        logline.save()
-                        total += 1
-                    subitem.delete()
-            # Make sure to mark the origin line as parsed
-            item.new = False
-            item.save()
-        print "Pruned %s log lines" % total
+        # Excute query, check if we even have any duplicates
+        q = cls.get_db().execute_sql(DUPE_QUERY)
+        if not q.rowcount:
+            print "Looks like the database is already clean!"
+
+        # Iterate over duplicates (in form [LineMsg.msg, count])
+        for msg, count in q.fetchall():
+            print "Found %s duplicates line %s, attempting to clean them up..." % (count, msg)
+
+            # Get any LineMsg's that match msg
+            q = LineMsg.select(LineMsg.id).where(LineMsg.msg == msg)
+
+            # Hackey fix to weird peewee primatives, could result in memory issues?
+            entires = [i.id for i in q]
+
+            # Change all loglines to use the first entry
+            print "Adjusted %s loglines to one LineMsg" % LogLine.select().where(LogLine.msg << entires).count()
+            LogLine.update(msg=entires[0]).where(LogLine.msg << entires).execute()
+
+            # Remove all logmessages that arent the first entry
+            print "Removed %s duplicate rows" % LineMsg.select().where(LineMsg.id << entires[1:]).count()
+            LineMsg.delete().where(LineMsg.id << entires[1:]).execute()
+
+        print "Boom! Your database is spiffy!"
 
 if __name__ == "__main__":
     if raw_input("Reset (DELETE ERYTHING) database? (y) ").lower() == 'y':
