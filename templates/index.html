@@ -1,4 +1,4 @@
 
 {% for item in results %}
-    <b>{{ item.time }}</b>: {{ item.msg.msg }}<br />
+    <b>{{ item.time }}</b>: {{ item.message['message']|safe }}<br />
 {% endfor %}

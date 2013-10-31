@@ -3,22 +3,26 @@ from datetime import datetime
 from collections import deque
 import socket, json, thread, time
 
+USE_REDIS = True
+
+if USE_REDIS:
+    import redis
+
 class Server(object):
-    def __init__(self, ip, port=9210, threads=2):
+    def __init__(self, ip, port=9210, threads=4):
         self.addr = (ip, port)
         self.threads = threads or 1
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.q = deque()
+        if USE_REDIS:
+            self.conn = redis.Redis()
 
     def parse(self, data):
         """
-        Attempts to parse a json-formatted
-        log line and add it to the database.
-        Keep in mind, this says fuck it to
-        doing any pre-queries or any duplication
-        matching, in favor of slow loading that
-        stuff later.
+        Attempts to parse a json-formatted log line and add it to the 
+        database. Keep in mind, this says fuck it to doing any pre-queries
+        or any duplication matching, in favor of slow loading that stuff later.
         """
         try:
             data = json.loads(data.strip())
@@ -26,14 +30,19 @@ class Server(object):
             print "Bad packet! (%s)" % data
             return
 
-        LogLine.from_json(data)
+        data = LogEntry.create(data)
+
+        if USE_REDIS:
+            del data['_id']
+            del data['types']
+            self.conn.publish("logly", json.dumps(data))
+            #self.conn.publish("logly.%s" % data.get("log"), json.dumps(data))
 
     def parse_thread(self, id, main=False, debug=False):
         """
-        A thread which grabs log entries off of
-        the internal queue, and attempts to parse them.
-        Keep in mind this doesn't have to be super fast,
-        because we're buffering log lines.
+        A thread which grabs log entries off of the internal queue, and
+        attempts to parse them. Keep in mind this doesn't have to be super
+        fast, because we're buffering log lines.
         """
         while True:
             if main and debug:
@@ -46,10 +55,9 @@ class Server(object):
 
     def start(self, debug=False):
         """
-        A loop which grabs log entires from UDP and
-        stores them in the internal queue for parsing.
-        On average, at full UDP local throughput, we
-        capture about 97 percent of log lines.
+        A loop which grabs log entires from UDP and stores them in the
+        internal queue for parsing. On average, at full UDP local throughput,
+        we capture about 99 percent of log lines.
         """
         if debug: print "Debug Enabled!"
         for i in range(0, self.threads):
@@ -61,8 +69,8 @@ class Server(object):
             self.q.append(data)
             if debug:
                 print "Pushed queue size to: %s" % len(self.q)
-                if len(self.q) > 5000:
-                    print "WARNING: Queue is larger than 5,000 items, maybe increase threads for server?"
+                # if len(self.q) > 5000:
+                #     print "WARNING: Queue is larger than 5,000 items, maybe increase threads for server?"
 
 s = Server("localhost")
 s.start(debug=True)

@@ -1,7 +1,6 @@
 from entries import *
 import socket, logging, json, os
 
-
 class Client(object):
     def __init__(self, ip, port):
         self.dest = (ip, port)
@@ -11,21 +10,20 @@ class Client(object):
         self.sock.sendto(data+"\n", self.dest)
 
 class LoglyHandler(logging.Handler):
-    def __init__(self, host, source="", port=9210, handlers=[]):
+    def __init__(self, host, log="default", source="", port=9210, handlers=[]):
         logging.Handler.__init__(self)
         self.client = Client(host, port)
         self.source = source or socket.gethostname()
         self.handlers = handlers
+        self.log = log
 
     def emit(self, record):
-        if not self.hash:
-            self.get_general_info()
-
         data = {
             "message": record.msg,
             "entry_types": self.handlers,
             "time": record.created,
             "source": self.source,
+            "log": self.log
         }
 
         for item in self.handlers:
@@ -33,6 +31,7 @@ class LoglyHandler(logging.Handler):
                 item = ENTRY_TYPES[item]
                 data[item.key] = item.do_send(record=record)
 
-        if isinstance(data['msg'], Exception):
-            data['msg'] = "%s: %s" % (data['msg'].__class__.__name__, str(data['msg']))
+        if isinstance(data['message'], Exception):
+            data['message'] = "%s: %s" % (data['message'].__class__.__name__, str(data['message']))
+        data['message'].encode("utf-8").replace("\n", unicode(u"\uF8FF"))
         self.client.send(json.dumps(data))

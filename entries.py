@@ -1,7 +1,5 @@
 import subprocess
 
-ENTRY_TYPES = {}
-
 class EntryType(object):
     cache = False
     key = "entry"
@@ -27,6 +25,11 @@ class EntryType(object):
 
     def build(self, data):
         return {}
+
+    @classmethod
+    def do_build(cls, data):
+        self = cls()
+        return self.build(data)
 
     def do_send(self, **kwargs):
         if (self.cache and not self.cached_data) or not self.cache:
@@ -67,3 +70,8 @@ class GitEntryType(object):
             elif line[1] == 'M':
                 data['status']['modified'] += 1
         return data
+
+ENTRY_TYPES = {
+    "entry": EntryType,
+    "git": GitEntryType
+}
